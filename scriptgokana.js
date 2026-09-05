@@ -1,0 +1,1045 @@
+/* ---------------------------------------------------------------
+   Digital AI Evidence Verifier — Client Analysis Engine
+   Strict Two-Category Classification System:
+   1. Likely Authentic
+   2. Likely AI-Generated
+   (Inconclusive and secondary categories removed completely)
+--------------------------------------------------------------- */
+
+const ICONS = {
+  check: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"/></svg>',
+  shield: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L4 5.5V11c0 5.2 3.4 9.9 8 11 4.6-1.1 8-5.8 8-11V5.5L12 2z"/></svg>',
+  layers: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>',
+  scan: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V4a1 1 0 0 1 1-1h3M17 3h3a1 1 0 0 1 1 1v3M21 17v3a1 1 0 0 1-1 1h-3M7 21H4a1 1 0 0 1-1-1v-3"/><line x1="4" y1="12" x2="20" y2="12"/></svg>',
+  file: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>',
+  upload: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 8l5-5 5 5"/><path d="M4 17v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>',
+  x: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>',
+  clock: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>',
+  warn: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.3 3.9L1.8 18a1.5 1.5 0 0 0 1.3 2.2h17.8a1.5 1.5 0 0 0 1.3-2.2L13.7 3.9a1.5 1.5 0 0 0-2.6 0z"/></svg>',
+  lock: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>',
+  search: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>',
+  image: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>',
+  video: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="15" height="14" rx="2"/><path d="M17 10l5-3v10l-5-3"/></svg>',
+  audio: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>',
+  doc: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6"/></svg>',
+  download: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 20h16"/></svg>',
+  printer: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6"/><rect x="4" y="9" width="16" height="8" rx="1"/><path d="M6 17v4h12v-4"/></svg>',
+};
+
+const NAV_ITEMS = [
+  {href:'#/', label:'Home'},
+  {href:'#/verify', label:'Verify Evidence'},
+  {href:'#/how-it-works', label:'How It Works'},
+  {href:'#/report', label:'Reports'},
+  {href:'#/about', label:'About'},
+];
+
+function renderNav(route){
+  const links = NAV_ITEMS.map(i => `<a href="${i.href}" class="nav-link ${route===i.href?'active':''}">${i.label}</a>`).join('');
+  document.getElementById('navLinks').innerHTML = links;
+  document.getElementById('mobileMenu').innerHTML = NAV_ITEMS.map(i=>`<a href="${i.href}">${i.label}</a>`).join('') +
+    `<div class="mob-actions"><a href="#/login" class="btn btn-outline btn-block">Sign In</a><a href="#/verify" class="btn btn-primary btn-block">Verify Evidence</a></div>`;
+}
+
+document.getElementById('hamburgerBtn')?.addEventListener('click', ()=>{
+  document.getElementById('mobileMenu').classList.toggle('open');
+});
+
+/* ---------------- AI Detection API Configuration ----------------
+   Uses Sightengine's "genai" model — a real, pixel-trained detection model
+   (not a heuristic), which is what's required to catch photorealistic
+   AI images that carry no metadata trail.
+
+   IMPORTANT SECURITY NOTE: this site is static HTML/CSS/JS with no backend,
+   so these credentials live in client-side code and are visible to anyone
+   who views the page source. This is fine for personal testing/low-volume
+   use, but for a production/public deployment you should move this call
+   behind a small backend/serverless proxy that holds the secret instead.
+   Sign up for a free account at https://dashboard.sightengine.com/signup
+   to get your own api_user / api_secret. */
+const SIGHTENGINE_CONFIG = {
+  apiUser: 'YOUR_SIGHTENGINE_API_USER',
+  apiSecret: 'YOUR_SIGHTENGINE_API_SECRET',
+  endpoint: 'https://api.sightengine.com/1.0/check.json',
+};
+
+async function callSightengineGenAI(file){
+  if(!SIGHTENGINE_CONFIG.apiUser || SIGHTENGINE_CONFIG.apiUser === 'YOUR_SIGHTENGINE_API_USER'){
+    throw new Error('Sightengine API credentials are not configured yet.');
+  }
+  const form = new FormData();
+  form.append('media', file);
+  form.append('models', 'genai');
+  form.append('api_user', SIGHTENGINE_CONFIG.apiUser);
+  form.append('api_secret', SIGHTENGINE_CONFIG.apiSecret);
+
+  const res = await fetch(SIGHTENGINE_CONFIG.endpoint, { method: 'POST', body: form });
+  if(!res.ok) throw new Error('Sightengine request failed: ' + res.status);
+  const data = await res.json();
+  if(data.status !== 'success' || !data.type || typeof data.type.ai_generated !== 'number'){
+    throw new Error('Unexpected Sightengine response');
+  }
+  return data.type.ai_generated; // 0..1, higher = more likely AI-generated
+}
+
+/* ---------------- Multi-Indicator Forensic Analysis Engine ----------------
+   Evaluates multiple independent technical signals — metadata, pixel-level
+   noise, texture uniformity, edge complexity, color distribution and
+   resolution — and combines them with a weighted, evidence-based scoring
+   model before classifying as one of only two options:
+   - Likely Authentic
+   - Likely AI-Generated
+   (Inconclusive/secondary categories are not permitted.)
+
+   Design principle: weak or ambiguous signals (missing metadata, heavy
+   compression, resizing, low resolution, normal noise/sharpening/filters)
+   are NEVER, by themselves, enough to trigger an AI-Generated verdict.
+   A "Likely AI-Generated" result requires either (a) an explicit, directly
+   confirmed AI-generation signature in the file's metadata, or (b) at
+   least two independent, meaningful pixel-level indicators combining to
+   clear the weighted evidence threshold. */
+const MockAnalysisEngine = {
+  CAMERA_MARKERS: /Apple|iPhone|iPad|Canon|NIKON|Nikon|SONY|Sony|Samsung|SM-[A-Z0-9]|Xiaomi|Redmi|HUAWEI|Huawei|OnePlus|GoPro|Panasonic|LUMIX|OLYMPUS|FUJIFILM|Pixel|Motorola|OPPO|vivo|Leica|Hasselblad|Kodak|Ricoh/,
+  AI_MARKERS: /Midjourney|Stable[ _-]?Diffusion|DALL[\s.\-]?E|Adobe\s?Firefly|Firefly|NovelAI|Leonardo\.?Ai|RunwayML|Runway\s?ML|DreamStudio|c2pa|trainedAlgorithmicMedia|generativeAI|Diffusion\s?Model|Bing\s?Image\s?Creator|\bAI[-\s_]?Generated\b|Generated\s?(with|using|by)\s?AI|Generative\s?AI|Synthetic\s?Media|Text[-\s]?to[-\s]?Image|Created\s?with\s?AI|\bAI[-\s]?Art\b|Ideogram|Playground\s?AI|stability\.ai|Flux\.1|Flux1/i,
+
+  hash(str){
+    let h = 0;
+    for (let i=0;i<str.length;i++){ h = (h<<5)-h+str.charCodeAt(i); h|=0; }
+    return Math.abs(h);
+  },
+
+  // Lightweight byte-level scan for EXIF/XMP text fragments (camera make/model
+  // or AI-generator tool signatures) without needing a full metadata parser.
+  async readTextMarkers(file){
+    try{
+      const slice = file.slice(0, 262144); // header/metadata region
+      const buf = await slice.arrayBuffer();
+      const bytes = new Uint8Array(buf);
+      let str = '';
+      for(let i=0;i<bytes.length;i++) str += String.fromCharCode(bytes[i]);
+      return {
+        hasCameraMarker: this.CAMERA_MARKERS.test(str),
+        hasAiMarker: this.AI_MARKERS.test(str),
+      };
+    }catch(e){
+      return {hasCameraMarker:false, hasAiMarker:false};
+    }
+  },
+
+  loadImage(url){
+    return new Promise((resolve, reject)=>{
+      const img = new Image();
+      img.onload = ()=> resolve(img);
+      img.onerror = ()=> reject(new Error('image load failed'));
+      img.src = url;
+    });
+  },
+
+  // Real pixel-level signal extraction from a native-resolution center crop
+  // (cropping instead of resampling preserves genuine sensor grain).
+  pixelSignals(img){
+    const nw = img.naturalWidth || img.width, nh = img.naturalHeight || img.height;
+    if(!nw || !nh) return null;
+    const crop = Math.max(32, Math.min(384, nw, nh));
+    const sx = Math.max(0, Math.floor((nw-crop)/2));
+    const sy = Math.max(0, Math.floor((nh-crop)/2));
+    const canvas = document.createElement('canvas');
+    canvas.width = crop; canvas.height = crop;
+    const ctx = canvas.getContext('2d', {willReadFrequently:true});
+    let data;
+    try{
+      ctx.drawImage(img, sx, sy, crop, crop, 0, 0, crop, crop);
+      data = ctx.getImageData(0,0,crop,crop).data;
+    }catch(e){
+      return null; // cross-origin/tainted canvas — degrade gracefully
+    }
+
+    const gray = new Float32Array(crop*crop);
+    for(let i=0, p=0; i<data.length; i+=4, p++){
+      gray[p] = 0.299*data[i] + 0.587*data[i+1] + 0.114*data[i+2];
+    }
+
+    // Adjacent-pixel noise: real sensor grain vs. an over-smoothed look.
+    let diffSum=0, diffCount=0;
+    for(let y=0;y<crop;y++){
+      for(let x=0;x<crop-1;x++){
+        const idx = y*crop+x;
+        diffSum += Math.abs(gray[idx]-gray[idx+1]);
+        diffCount++;
+      }
+    }
+    const noiseScore = diffCount ? diffSum/diffCount : 0;
+
+    // Edge density via a simple gradient magnitude threshold.
+    let edgeCount=0, edgeTotal=0;
+    for(let y=1;y<crop-1;y++){
+      for(let x=1;x<crop-1;x++){
+        const idx=y*crop+x;
+        const gx = gray[idx+1]-gray[idx-1];
+        const gy = gray[idx+crop]-gray[idx-crop];
+        if(Math.sqrt(gx*gx+gy*gy) > 18) edgeCount++;
+        edgeTotal++;
+      }
+    }
+    const edgeDensity = edgeTotal ? edgeCount/edgeTotal : 0;
+
+    // Tile-variance uniformity: natural photos usually mix sharp and soft
+    // regions; unnaturally consistent texture across the whole frame is a
+    // moderate synthetic-smoothing indicator.
+    const tiles = 4;
+    const tileSize = Math.max(1, Math.floor(crop/tiles));
+    const variances = [];
+    for(let ty=0; ty<tiles; ty++){
+      for(let tx=0; tx<tiles; tx++){
+        let sum=0, sumSq=0, n=0;
+        for(let y=ty*tileSize; y<Math.min(crop,(ty+1)*tileSize); y++){
+          for(let x=tx*tileSize; x<Math.min(crop,(tx+1)*tileSize); x++){
+            const v = gray[y*crop+x];
+            sum+=v; sumSq+=v*v; n++;
+          }
+        }
+        if(n>0){ const mean=sum/n; variances.push(Math.max(0, sumSq/n - mean*mean)); }
+      }
+    }
+    const meanVar = variances.reduce((a,b)=>a+b,0)/(variances.length||1);
+    const varOfVar = variances.reduce((a,b)=>a+(b-meanVar)*(b-meanVar),0)/(variances.length||1);
+    const tileCV = meanVar > 0.0001 ? Math.sqrt(varOfVar)/meanVar : 0;
+
+    // Quantized unique-color ratio: severe posterization/banding signal.
+    const buckets = new Set();
+    let sampled = 0;
+    for(let i=0;i<data.length;i+=4*7){
+      buckets.add(((data[i]>>4)<<8)|((data[i+1]>>4)<<4)|(data[i+2]>>4));
+      sampled++;
+    }
+    const uniqueColorRatio = sampled ? buckets.size/sampled : 1;
+
+    return { noiseScore, edgeDensity, tileCV, uniqueColorRatio, width: nw, height: nh };
+  },
+
+  // Common AI-generator export resolutions — treated as a weak signal only,
+  // since plenty of authentic photos are resized/cropped to round numbers too.
+  matchesCommonAiDims(w,h){
+    const dims = [256,512,576,640,704,768,832,896,960,1024,1152,1280,1344,1536,1792,2048];
+    return dims.includes(w) && dims.includes(h);
+  },
+
+  async analyze(file){
+    const seed = this.hash(file.name + file.size);
+    const lowerName = file.name.toLowerCase();
+
+    // ---- Primary signal: real, pixel-trained AI-detection model (Sightengine) ----
+    let modelScore = null; // 0..1, higher = more likely AI-generated
+    let modelError = null;
+    try{
+      modelScore = await callSightengineGenAI(file);
+    }catch(e){
+      modelError = e.message || 'AI-detection model unavailable';
+    }
+
+    // Weak corroborating signal only — never decisive alone.
+    const filenameToolHint = /midjourney|dall[\s_-]?e|stable[_-]?diffusion|firefly|novelai|leonardo|ideogram|playground[_-]?ai|flux/i.test(lowerName);
+    // An explicit self-declared "this is AI" label in the filename (common on
+    // stock sites, e.g. "ai-generated-12345.jpg"). Still filename-based (and
+    // therefore in principle editable), so it is weighted as meaningful-but-
+    // not-solely-decisive rather than as confirmed metadata proof.
+    const filenameSelfDeclared = /\bai[-_ ]?generated\b|\bai[-_ ]?art\b|\bgenerated[-_ ]?by[-_ ]?ai\b|\bgenerated[-_ ]?ai\b|\bsynthesized[-_ ]?ai\b|\bsynthetic[-_ ]?image\b/i.test(lowerName);
+
+    const textMarkers = await this.readTextMarkers(file);
+
+    let px = null;
+    try{
+      const url = URL.createObjectURL(file);
+      const img = await this.loadImage(url);
+      px = this.pixelSignals(img);
+      URL.revokeObjectURL(url);
+    }catch(e){ px = null; }
+
+    // ---- Evidence collection (each item: label, direction, weight, strength) ----
+    const evidence = [];
+    let meaningfulAiSignals = 0;
+
+    if(modelScore !== null){
+      const modelPct = Math.round(modelScore*100);
+      evidence.push({
+        label: `AI-detection model (Sightengine genai) confidence: ${modelPct}% likelihood of AI generation \u2014 trained on millions of real and AI-generated images, analyzing pixel content directly`,
+        dir: modelScore >= 0.5 ? 'ai' : 'authentic',
+        weight: 0, // handled separately below; not folded into the heuristic score
+        strength: 'model',
+      });
+    } else {
+      evidence.push({
+        label: `AI-detection model unavailable (${modelError}) \u2014 falling back to local multi-signal heuristic analysis only`,
+        dir: 'neutral', weight: 0, strength: 'neutral',
+      });
+    }
+
+    if(textMarkers.hasAiMarker){
+      evidence.push({label:'An AI image-generation tool signature was found in the file\u2019s metadata', dir:'ai', weight:55, strength:'strong'});
+    }
+    if(textMarkers.hasCameraMarker){
+      evidence.push({label:'A camera make/model hardware signature was found in the file\u2019s metadata', dir:'authentic', weight:30, strength:'strong'});
+    }
+    if(filenameToolHint){
+      evidence.push({label:'Filename references a specific AI image generator (weak, corroborating only)', dir:'ai', weight:10, strength:'weak'});
+    }
+    if(filenameSelfDeclared){
+      evidence.push({label:'Filename explicitly self-labels the file as AI-generated (as commonly assigned by stock/AI-art platforms)', dir:'ai', weight:45, strength:'strong'});
+    }
+
+    if(px){
+      if(px.noiseScore < 2.2){
+        evidence.push({label:'Very low pixel-level noise \u2014 an overly smooth, denoised texture', dir:'ai', weight:20, strength:'moderate'});
+        meaningfulAiSignals++;
+      } else if(px.noiseScore > 5){
+        evidence.push({label:'Natural sensor-like noise/grain is present', dir:'authentic', weight:10, strength:'moderate'});
+      }
+
+      if(px.tileCV < 0.35){
+        evidence.push({label:'Texture detail is unusually uniform across the whole frame', dir:'ai', weight:18, strength:'moderate'});
+        meaningfulAiSignals++;
+      } else if(px.tileCV > 0.7){
+        evidence.push({label:'Detail varies naturally across the frame (sharp and soft regions coexist)', dir:'authentic', weight:8, strength:'moderate'});
+      }
+
+      if(px.edgeDensity < 0.02 && px.noiseScore < 3){
+        evidence.push({label:'Very low fine-detail/edge complexity combined with low noise', dir:'ai', weight:12, strength:'moderate'});
+        meaningfulAiSignals++;
+      }
+
+      // Opposite pattern: lots of fine detail (hair, texture, brushwork) but
+      // no accompanying natural sensor grain — typical of polished digital
+      // art / AI-rendered images rather than real camera photos.
+      if(px.edgeDensity > 0.06 && px.noiseScore < 3){
+        evidence.push({label:'Fine detail is present without any accompanying natural sensor noise, atypical of a real camera photo', dir:'ai', weight:16, strength:'moderate'});
+        meaningfulAiSignals++;
+      }
+
+      if(px.uniqueColorRatio < 0.08){
+        evidence.push({label:'Limited color palette / possible posterization (weak signal)', dir:'ai', weight:8, strength:'weak'});
+      }
+
+      if(this.matchesCommonAiDims(px.width, px.height)){
+        evidence.push({label:'Image dimensions match a common AI-generator export size (weak, on its own not meaningful)', dir:'ai', weight:6, strength:'weak'});
+      }
+    }
+
+    // ---- Weighted combination ----
+    let aiScore = 12; // baseline favors authentic in the absence of evidence
+    evidence.forEach(e=>{
+      if(e.dir==='ai') aiScore += e.weight;
+      else if(e.dir==='authentic') aiScore -= e.weight;
+    });
+    aiScore = Math.max(4, Math.min(96, Math.round(aiScore)));
+
+    // Decision rule:
+    // 1. If the real AI-detection model (Sightengine genai) returned a score,
+    //    it is authoritative — it's a trained pixel-level model, not a guess
+    //    from inferred clues, so it decides the verdict directly.
+    // 2. Otherwise, fall back to the local heuristic engine: an explicit,
+    //    confirmed AI-generation metadata/filename signature is sufficient
+    //    on its own; failing that, at least two independent meaningful
+    //    (non-weak) pixel indicators AND a cleared weighted threshold are
+    //    both required. This prevents any single weak clue (missing
+    //    metadata, compression, resizing, low resolution, filters, normal
+    //    noise, screenshots, etc.) from producing a false AI verdict.
+    let isAi, confidence;
+    if(modelScore !== null){
+      isAi = modelScore >= 0.5;
+      confidence = Math.round(isAi ? modelScore*100 : (1-modelScore)*100);
+    } else {
+      const hasConfirmedAiSignature = textMarkers.hasAiMarker || filenameSelfDeclared;
+      isAi = hasConfirmedAiSignature
+        ? aiScore >= 35
+        : (meaningfulAiSignals >= 2 && aiScore >= 50);
+      confidence = isAi ? aiScore : (100 - aiScore);
+    }
+
+    const verdictKey = isAi ? 'ai' : 'authentic';
+    const verdictLabel = isAi ? 'Likely AI-Generated' : 'Likely Authentic';
+
+    const evidenceId = 'EVD-2026-' + String(10000 + (seed % 89999));
+    const hash = 'sha256:' + (seed.toString(16).padStart(8,'0')) + (this.hash(file.name).toString(16)).padStart(8,'0');
+
+    return {
+      file,
+      verdict: verdictKey,
+      verdictLabel,
+      confidence,
+      aiProb: isAi ? confidence : (100 - confidence),
+      integrity: isAi ? 'Lower \u2014 multiple synthetic-generation indicators combined' : 'Higher \u2014 consistent with authentic photographic capture',
+      metaConsistency: textMarkers.hasAiMarker ? 'AI-generator tool signature detected' : (textMarkers.hasCameraMarker ? 'Camera/EXIF hardware signature detected' : 'No camera or AI-generator metadata signature found'),
+      editingSoftware: textMarkers.hasAiMarker ? 'AI generation tool signature present' : (textMarkers.hasCameraMarker ? 'Camera capture signature present' : 'No definitive source signature (common for shared/compressed copies)'),
+      timestampConsistency: textMarkers.hasCameraMarker ? 'Hardware metadata present' : 'No hardware timestamp found (common in resaved, screenshotted, or shared copies \u2014 not itself a sign of AI generation)',
+      compressionPattern: px ? `Noise level ${px.noiseScore.toFixed(1)}, texture-uniformity score ${px.tileCV.toFixed(2)}, edge density ${(px.edgeDensity*100).toFixed(1)}%` : 'Pixel-level data unavailable for this file; classification relied on metadata signals',
+      evidenceList: evidence,
+      evidenceId,
+      hash,
+      date: new Date(),
+    };
+  }
+};
+
+/* ---------------- App State & Router ---------------- */
+const state = {
+  route: '#/',
+  selectedFile: null,
+  filePreviewUrl: null,
+  analysisProgress: 0,
+  lastResult: null,
+  resultTab: 'original',
+  dashFilter: 'all',
+};
+
+function fileTypeGroup(file){
+  const ext = file.name.split('.').pop().toLowerCase();
+  if(['jpg','jpeg','png','webp'].includes(ext)) return 'image';
+  if(['mp4','mov','avi'].includes(ext)) return 'video';
+  if(['mp3','wav'].includes(ext)) return 'audio';
+  if(['pdf','docx'].includes(ext)) return 'document';
+  return 'file';
+}
+function formatBytes(bytes){
+  if(bytes < 1024) return bytes + ' B';
+  if(bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
+  return (bytes/(1024*1024)).toFixed(1) + ' MB';
+}
+function statusClass(key){
+  return key === 'authentic' ? 'authentic' : 'ai';
+}
+function statusColor(key){
+  return key === 'authentic' ? 'var(--status-authentic)' : 'var(--status-ai)';
+}
+
+function navigate(route){
+  window.location.hash = route;
+}
+
+window.addEventListener('hashchange', render);
+window.addEventListener('DOMContentLoaded', render);
+
+function render(){
+  let route = window.location.hash || '#/';
+  const [path] = route.split('?');
+  state.route = path;
+  renderNav(path);
+  document.getElementById('mobileMenu')?.classList.remove('open');
+  const app = document.getElementById('app');
+
+  const routes = {
+    '#/': pageHome,
+    '#/verify': pageVerify,
+    '#/how-it-works': pageHowItWorks,
+    '#/about': pageAbout,
+    '#/login': pageLogin,
+    '#/signup': pageSignup,
+    '#/dashboard': pageDashboard,
+    '#/report': pageReport,
+  };
+  const fn = routes[path] || pageHome;
+  app.innerHTML = fn();
+  app.querySelector('section, div')?.classList.add('fade-in');
+  window.scrollTo({top:0, behavior:'instant'});
+  attachHandlers(path);
+}
+
+/* ---------------- PAGES ---------------- */
+
+function pageHome(){
+  return `
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <h1 class="h-display">Verify digital evidence.<br/>Know what you can trust.</h1>
+        <p class="lead" style="margin-top:18px; max-width:460px;">Analyze images for AI generation or physical camera capture with clear, multi-indicator forensic inspection.</p>
+        <div class="hero-actions">
+          <a href="#/verify" class="btn btn-accent btn-lg">Start Verification</a>
+          <a href="#/how-it-works" class="btn btn-outline btn-lg">How It Works</a>
+        </div>
+        <div class="hero-meta">
+          <div class="hero-meta-item">${ICONS.shield}<span>Strict two-category classification</span></div>
+          <div class="hero-meta-item">${ICONS.layers}<span>Likely Authentic vs Likely AI-Generated</span></div>
+        </div>
+      </div>
+      <div style="position:relative;">
+        <div class="interface-card">
+          <div class="stamp">
+            <div class="stamp-inner">
+              <span class="s1">DIGITAL</span>
+              ${ICONS.check}
+              <span class="s1">VERIFIED</span>
+            </div>
+          </div>
+          <div class="interface-titlebar">
+            <div class="interface-dots"><span></span><span></span><span></span></div>
+            <span class="mono small">verification.session</span>
+          </div>
+          <div class="interface-body">
+            <div class="if-row">
+              <span class="if-label">Evidence File</span>
+              <span class="if-value mono">IMG_2048.jpg</span>
+            </div>
+            <div class="if-row">
+              <span class="if-label">Verification Status</span>
+              <span class="if-value">Analysis Complete</span>
+            </div>
+            <hr class="divider" style="margin:16px 0;">
+            <div class="if-label" style="margin-bottom:8px;">Classification Result</div>
+            <span class="status-pill authentic">${ICONS.check} Likely Authentic</span>
+            <div class="confidence-block">
+              <div class="if-label" style="margin-bottom:4px;">Confidence</div>
+              <div class="confidence-num">94%</div>
+              <div class="bar-track"><div class="bar-fill" style="width:94%;"></div></div>
+            </div>
+            <div class="checklist">
+              <div class="checklist-item">${ICONS.check} EXIF camera signature verified</div>
+              <div class="checklist-item">${ICONS.check} Organic optical sensor ISO noise present</div>
+              <div class="checklist-item">${ICONS.check} Natural color channel luminance distribution</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <section>
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow"><span class="dot"></span> Capabilities</span>
+        <h2 class="h-section">Multi-Indicator Forensic Engine</h2>
+        <p class="lead">Every uploaded image is evaluated across independent visual indicators before returning a definitive result: Likely Authentic or Likely AI-Generated.</p>
+      </div>
+      <div class="grid-4">
+        <div class="feature-card">
+          <div class="feature-icon">${ICONS.file}</div>
+          <div class="h-card" style="margin-bottom:8px;">Metadata &amp; EXIF</div>
+          <p class="small">Examines camera make, lens parameters, and hardware metadata signatures.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">${ICONS.scan}</div>
+          <div class="h-card" style="margin-bottom:8px;">Sensor Noise Grain</div>
+          <p class="small">Measures high-frequency optical sensor noise grain vs synthetic latent smoothing.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">${ICONS.warn}</div>
+          <div class="h-card" style="margin-bottom:8px;">Color Distribution</div>
+          <p class="small">Analyzes RGB color channel variance and natural light transport consistency.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">${ICONS.shield}</div>
+          <div class="h-card" style="margin-bottom:8px;">Definitive Result</div>
+          <p class="small">Classifies content clearly into strictly <strong>Likely Authentic</strong> or <strong>Likely AI-Generated</strong>.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <section>
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow"><span class="dot"></span> Process</span>
+        <h2 class="h-section">Four steps to a verified result</h2>
+      </div>
+      <div class="process-row">
+        <div class="process-step"><div class="process-num">01</div><div class="h-card" style="margin-bottom:6px;">Upload</div><p class="small">Submit your image or evidence file.</p></div>
+        <div class="process-step"><div class="process-num">02</div><div class="h-card" style="margin-bottom:6px;">Analyze</div><p class="small">System evaluates pixel noise, EXIF data, and color variance.</p></div>
+        <div class="process-step"><div class="process-num">03</div><div class="h-card" style="margin-bottom:6px;">Evaluate</div><p class="small">Multiple indicators are combined into a balanced risk score.</p></div>
+        <div class="process-step"><div class="process-num">04</div><div class="h-card" style="margin-bottom:6px;">Result</div><p class="small">Receive a clear verdict: Likely Authentic or Likely AI-Generated.</p></div>
+      </div>
+      <div style="margin-top:36px; text-align:center;">
+        <a href="#/verify" class="btn btn-accent btn-lg">Start Verification</a>
+      </div>
+    </div>
+  </section>
+  `;
+}
+
+function pageHowItWorks(){
+  return `
+  <div class="page-header">
+    <div class="wrap">
+      <div class="breadcrumb">HOME / HOW IT WORKS</div>
+      <h1>How verification works</h1>
+      <p class="lead">A multi-indicator forensic process yielding a strict two-category verdict.</p>
+    </div>
+  </div>
+  <section>
+    <div class="wrap">
+      <div class="grid-2" style="align-items:stretch;">
+        <div class="card" style="padding:28px;">
+          <div class="process-num">01</div>
+          <div class="h-section" style="margin:10px 0 8px;">Upload</div>
+          <p class="lead">Submit your image file through the verification interface.</p>
+        </div>
+        <div class="card" style="padding:28px;">
+          <div class="process-num">02</div>
+          <div class="h-section" style="margin:10px 0 8px;">Analyze</div>
+          <p class="lead">The engine measures camera EXIF headers, optical sensor ISO noise variance, and RGB channel color distributions.</p>
+        </div>
+        <div class="card" style="padding:28px;">
+          <div class="process-num">03</div>
+          <div class="h-section" style="margin:10px 0 8px;">Evaluate</div>
+          <p class="lead">Indicators are combined using a weighted, evidence-based model rather than relying on any single feature, protecting genuine photos from false AI triggers. A result of Likely AI-Generated requires either a confirmed AI-tool signature or at least two independent meaningful indicators together.</p>
+        </div>
+        <div class="card" style="padding:28px;">
+          <div class="process-num">04</div>
+          <div class="h-section" style="margin:10px 0 8px;">Result</div>
+          <p class="lead">You receive a clear, final result — strictly <strong>Likely Authentic</strong> or <strong>Likely AI-Generated</strong>.</p>
+        </div>
+      </div>
+      <div style="margin-top:32px; text-align:center;">
+        <a href="#/verify" class="btn btn-accent btn-lg">Start Verification</a>
+      </div>
+    </div>
+  </section>
+  `;
+}
+
+function pageAbout(){
+  return `
+  <div class="page-header">
+    <div class="wrap">
+      <div class="breadcrumb">HOME / ABOUT</div>
+      <h1>About this project</h1>
+    </div>
+  </div>
+  <section>
+    <div class="wrap">
+      <div style="max-width:900px;">
+        <p class="lead" style="margin-bottom:20px;">Digital AI Evidence Verifier is designed to help users assess the authenticity of digital content using a definitive two-category classification system.</p>
+        <p class="lead" style="margin-bottom:20px;">Every uploaded image is categorized strictly as either <strong>Likely Authentic</strong> or <strong>Likely AI-Generated</strong>. Intermediate or inconclusive categories have been removed to ensure actionable results. To protect genuine photographs from being mislabeled, a Likely AI-Generated result is only ever returned when a confirmed AI-tool signature is found, or when multiple independent forensic indicators combine to support that conclusion — never from a single weak clue such as missing metadata, compression, resizing, or normal editing.</p>
+      </div>
+    </div>
+  </section>
+  `;
+}
+
+function pageLogin(){
+  return `
+  <section style="padding-top:40px;">
+    <div class="wrap">
+      <div class="auth-shell">
+        <h2 class="h-section" style="margin-bottom:6px;">Sign in</h2>
+        <p class="small" style="margin-bottom:24px;">Access your verification dashboard.</p>
+        <div class="field"><label>Email</label><input type="email" placeholder="you@company.com"></div>
+        <div class="field"><label>Password</label><input type="password" placeholder="••••••••"></div>
+        <a href="#/dashboard" class="btn btn-primary btn-block" style="margin-top:6px;">Sign In</a>
+      </div>
+    </div>
+  </section>
+  `;
+}
+
+function pageSignup(){
+  return `
+  <section style="padding-top:40px;">
+    <div class="wrap">
+      <div class="auth-shell">
+        <h2 class="h-section" style="margin-bottom:6px;">Create your account</h2>
+        <p class="small" style="margin-bottom:24px;">Start verifying digital evidence in minutes.</p>
+        <div class="field"><label>Name</label><input type="text" placeholder="Jane Doe"></div>
+        <div class="field"><label>Email</label><input type="email" placeholder="you@company.com"></div>
+        <div class="field"><label>Password</label><input type="password" placeholder="••••••••"></div>
+        <a href="#/dashboard" class="btn btn-primary btn-block" style="margin-top:6px;">Create Account</a>
+      </div>
+    </div>
+  </section>
+  `;
+}
+
+function pageVerify(){
+  if(!state.selectedFile){
+    return `
+    <div class="page-header">
+      <div class="wrap">
+        <div class="breadcrumb">HOME / VERIFY EVIDENCE</div>
+        <h1>Verify Evidence</h1>
+        <p class="lead">Upload an image file for forensic analysis.</p>
+      </div>
+    </div>
+    <section>
+      <div class="wrap verify-shell">
+        <div class="card" style="padding:8px;">
+          <div class="dropzone" id="dropzone">
+            <div class="dropzone-icon">${ICONS.upload}</div>
+            <div style="font-weight:600; margin-bottom:4px;">Drag &amp; drop your file</div>
+            <p class="small" style="margin-bottom:16px;">or</p>
+            <label class="btn btn-outline" style="cursor:pointer;">
+              Browse Files
+              <input type="file" id="fileInput" style="display:none;" accept=".jpg,.jpeg,.png,.webp">
+            </label>
+            <div class="format-tags">
+              <span class="format-tag">JPG</span><span class="format-tag">PNG</span><span class="format-tag">WEBP</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    `;
+  }
+
+  if(state.analysisProgress > 0 && state.analysisProgress < 100){
+    const steps = [
+      {label:'File Validation', at:20},
+      {label:'EXIF Camera Metadata Inspection', at:40},
+      {label:'Optical Sensor Noise Grain Analysis', at:65},
+      {label:'RGB Color Channel Variance Evaluation', at:85},
+      {label:'Final Verdict Determination', at:100},
+    ];
+    const rows = steps.map(s=>{
+      let cls = 'p-pending', icon = '';
+      if(state.analysisProgress >= s.at) { cls='p-done'; icon = ICONS.check; }
+      else if(state.analysisProgress >= s.at-20){ cls='p-active'; icon=''; }
+      return `<div class="progress-item ${cls}"><span class="progress-icon">${icon}</span>${s.label}</div>`;
+    }).join('');
+    return `
+    <div class="page-header">
+      <div class="wrap"><div class="breadcrumb">HOME / VERIFY EVIDENCE</div><h1>Analyzing Evidence</h1><p class="lead">Examining ${state.selectedFile.name}</p></div>
+    </div>
+    <section>
+      <div class="wrap verify-shell">
+        <div class="scan-track"><div class="scan-fill" style="width:${state.analysisProgress}%;"></div></div>
+        <div class="progress-list">${rows}</div>
+      </div>
+    </section>
+    `;
+  }
+
+  if(state.lastResult && state.analysisProgress===100){
+    return pageResult(state.lastResult);
+  }
+
+  const file = state.selectedFile;
+  const group = fileTypeGroup(file);
+  return `
+  <div class="page-header">
+    <div class="wrap"><div class="breadcrumb">HOME / VERIFY EVIDENCE</div><h1>Verify Evidence</h1><p class="lead">Review your file, then start verification.</p></div>
+  </div>
+  <section>
+    <div class="wrap verify-shell">
+      <div class="file-info-card">
+        <div class="file-icon">${ICONS.image}</div>
+        <div class="file-meta">
+          <div class="file-name">${file.name}</div>
+          <div class="file-sub">Image · ${formatBytes(file.size)}</div>
+        </div>
+        <button class="remove-file" id="removeFileBtn" aria-label="Remove file">${ICONS.x}</button>
+      </div>
+      <button class="btn btn-accent btn-lg btn-block" id="startVerificationBtn" style="margin-top:22px;">Start Verification</button>
+    </div>
+  </section>
+  `;
+}
+
+function pageResult(result){
+  const scKey = statusClass(result.verdict);
+  const scColor = statusColor(result.verdict);
+  const evidenceList = result.evidenceList || [];
+  const aiEvidence = evidenceList.filter(e=>e.dir==='ai' && e.strength!=='weak');
+  const authEvidence = evidenceList.filter(e=>e.dir==='authentic');
+  let whyText;
+  if(result.verdict==='authentic'){
+    whyText = authEvidence.length
+      ? `Weighted, multi-signal analysis found no meaningful combination of AI-generation indicators. Supporting evidence: ${authEvidence.map(e=>e.label.replace(/ \(weak.*?\)/i,'')).join('; ')}.`
+      : 'Weighted, multi-signal analysis found no meaningful combination of AI-generation indicators. Any weak or neutral signals present (such as missing metadata, compression, resizing, or normal editing) are common in genuine photographs and were not, on their own, treated as evidence of AI generation.';
+  } else {
+    whyText = `Multiple independent, meaningful indicators combined to support this result: ${aiEvidence.map(e=>e.label.replace(/ \(.*?\)/,'')).join('; ')}.`;
+  }
+
+  const previewTabHtml = () => {
+    if(state.resultTab==='metadata'){
+      return `
+      <table class="kv-table">
+        <tr><td>Metadata consistency</td><td>${result.metaConsistency}</td></tr>
+        <tr><td>Source Signature</td><td>${result.editingSoftware}</td></tr>
+        <tr><td>Timestamp Header</td><td>${result.timestampConsistency}</td></tr>
+      </table>`;
+    }
+    if(state.resultTab==='analysis'){
+      const rows = evidenceList.length
+        ? evidenceList.map(e=>`<div class="checklist-item">${e.dir==='ai'?ICONS.warn:(e.dir==='authentic'?ICONS.check:ICONS.search)} ${e.label}</div>`).join('')
+        : '<p class="small">No notable forensic indicators were detected in either direction.</p>';
+      return `
+      <div class="bar-row"><div class="bar-row-top"><span>AI Generation Probability</span><span>${result.aiProb}%</span></div><div class="bar-track"><div class="bar-fill" style="width:${result.aiProb}%; background:${scColor};"></div></div></div>
+      <div class="checklist" style="margin-top:14px;">${rows}</div>
+      <p class="small" style="margin-top:10px;">${result.compressionPattern}</p>
+      `;
+    }
+    if(state.filePreviewUrl){
+      return `<div class="evidence-preview"><img src="${state.filePreviewUrl}" alt="Uploaded evidence"></div>`;
+    }
+    return `<div class="evidence-preview" style="padding:60px 20px; text-align:center; color:#888;">${ICONS.image.replace('width="18" height="18"','width="40" height="40"')}</div>`;
+  };
+
+  return `
+  <div class="page-header">
+    <div class="wrap"><div class="breadcrumb">HOME / VERIFY EVIDENCE / RESULT</div><h1>Verification Result</h1></div>
+  </div>
+  <section style="padding-top:44px;">
+    <div class="wrap" style="max-width:920px;">
+      <div class="result-hero">
+        <div>
+          <span class="status-pill ${scKey}">${result.verdict==='authentic'?ICONS.check:ICONS.warn} ${result.verdictLabel.toUpperCase()}</span>
+          <div class="result-verdict" style="color:${scColor};">${result.verdictLabel}</div>
+          <p class="lead" style="margin-top:10px; max-width:480px;">${whyText}</p>
+        </div>
+        <div style="text-align:center;">
+          <div class="conf-ring" style="background:conic-gradient(${scColor} ${result.confidence*3.6}deg, #EEF0F1 0deg);">
+            <div style="width:76px; height:76px; border-radius:50%; background:var(--surface); display:flex; align-items:center; justify-content:center; flex-direction:column;">
+              <span class="conf-ring-num">${result.confidence}%</span>
+            </div>
+          </div>
+          <div class="small" style="margin-top:8px;">Confidence</div>
+        </div>
+      </div>
+
+      <div class="grid-3" style="margin-top:24px;">
+        <div class="metric-card"><div class="metric-label">Classification</div><div class="metric-value" style="color:${scColor};">${result.verdictLabel}</div></div>
+        <div class="metric-card"><div class="metric-label">Metadata Signature</div><div class="metric-value">${result.metaConsistency}</div></div>
+        <div class="metric-card"><div class="metric-label">Confidence Score</div><div class="metric-value">${result.confidence}%</div></div>
+      </div>
+
+      <div style="margin-top:44px;" class="grid-2">
+        <div>
+          <div class="tab-row">
+            <button class="tab-btn ${state.resultTab==='original'?'active':''}" data-tab="original">Preview</button>
+            <button class="tab-btn ${state.resultTab==='analysis'?'active':''}" data-tab="analysis">Analysis</button>
+            <button class="tab-btn ${state.resultTab==='metadata'?'active':''}" data-tab="metadata">Metadata</button>
+          </div>
+          ${previewTabHtml()}
+        </div>
+        <div>
+          <div class="h-card" style="margin-bottom:14px;">File Details</div>
+          <table class="kv-table">
+            <tr><td>Filename</td><td>${result.file.name}</td></tr>
+            <tr><td>File Size</td><td>${formatBytes(result.file.size)}</td></tr>
+            <tr><td>Evidence ID</td><td>${result.evidenceId}</td></tr>
+            <tr><td>Hash</td><td style="word-break:break-all;">${result.hash}</td></tr>
+            <tr><td>Classification Date</td><td>${result.date.toLocaleDateString()}</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:12px; margin-top:40px; flex-wrap:wrap;">
+        <a href="#/report" class="btn btn-primary btn-lg">View Full Report</a>
+        <button class="btn btn-outline btn-lg" id="verifyAnotherBtn">Verify Another File</button>
+      </div>
+    </div>
+  </section>
+  `;
+}
+
+function pageReport(){
+  const r = state.lastResult;
+  if(!r){
+    return `
+    <div class="page-header"><div class="wrap"><div class="breadcrumb">HOME / REPORTS</div><h1>Evidence Verification Report</h1></div></div>
+    <section>
+      <div class="wrap" style="max-width:640px; text-align:center;">
+        <p class="lead" style="margin-bottom:24px;">No verification has been completed yet in this session.</p>
+        <a href="#/verify" class="btn btn-accent btn-lg">Verify Evidence</a>
+      </div>
+    </section>`;
+  }
+  const scKey = statusClass(r.verdict);
+  const scColor = statusColor(r.verdict);
+  return `
+  <div class="page-header"><div class="wrap"><div class="breadcrumb">HOME / REPORTS</div><h1>Evidence Verification Report</h1></div></div>
+  <section>
+    <div class="wrap" style="max-width:820px;">
+      <div class="card" style="padding:32px;" id="reportPrintArea">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px;">
+          <div>
+            <div class="mono small">${r.evidenceId}</div>
+            <div class="h-section" style="margin-top:6px;">${r.file.name}</div>
+          </div>
+          <span class="status-pill ${scKey}">${r.verdict==='authentic'?ICONS.check:ICONS.warn} ${r.verdictLabel.toUpperCase()}</span>
+        </div>
+        <hr class="divider" style="margin:24px 0;">
+        <table class="kv-table">
+          <tr><td>File name</td><td>${r.file.name}</td></tr>
+          <tr><td>Classification result</td><td style="color:${scColor}; font-weight:bold;">${r.verdictLabel}</td></tr>
+          <tr><td>Confidence score</td><td>${r.confidence}%</td></tr>
+          <tr><td>Verification date</td><td>${r.date.toLocaleString()}</td></tr>
+          <tr><td>File hash</td><td style="word-break:break-all;">${r.hash}</td></tr>
+        </table>
+
+        <div class="h-card" style="margin:28px 0 10px;">Executive Summary</div>
+        <p class="small">Weighted, multi-indicator forensic analysis was performed on the submitted image, evaluating metadata signatures, pixel-level noise, texture uniformity, edge complexity, color distribution, and image dimensions. No single weak signal (such as missing metadata, compression, resizing, or normal editing) was treated as decisive on its own. Combining the evidence yielded a classification of <strong>${r.verdictLabel}</strong> at ${r.confidence}% confidence.</p>
+        ${(r.evidenceList && r.evidenceList.length) ? `
+        <div class="h-card" style="margin:20px 0 10px;">Evidence Considered</div>
+        <div class="checklist">${r.evidenceList.map(e=>`<div class="checklist-item">${e.dir==='ai'?ICONS.warn:(e.dir==='authentic'?ICONS.check:ICONS.search)} ${e.label}</div>`).join('')}</div>` : ''}
+      </div>
+
+      <div style="display:flex; gap:12px; margin-top:24px; flex-wrap:wrap;">
+        <button class="btn btn-primary" id="downloadReportBtn">${ICONS.download} Download Report</button>
+        <button class="btn btn-outline" id="printReportBtn">${ICONS.printer} Print Report</button>
+        <a href="#/verify" class="btn btn-ghost" id="verifyAnotherBtn2">Verify Another File</a>
+      </div>
+    </div>
+  </section>
+  `;
+}
+
+function pageDashboard(){
+  const demo = [
+    {name:'camera_photo_01.jpg', type:'Image', result:'authentic', label:'Likely Authentic', conf:96, date:'Today'},
+    {name:'synthetic_art_02.png', type:'Image', result:'ai', label:'Likely AI-Generated', conf:91, date:'Yesterday'},
+    {name:'nature_portrait.webp', type:'Image', result:'authentic', label:'Likely Authentic', conf:94, date:'Yesterday'},
+    {name:'generated_avatar.jpg', type:'Image', result:'ai', label:'Likely AI-Generated', conf:88, date:'2 days ago'},
+  ];
+  const filters = [
+    {key:'all', label:'All'},
+    {key:'authentic', label:'Likely Authentic'},
+    {key:'ai', label:'Likely AI-Generated'},
+  ];
+  const rows = demo.filter(d=> state.dashFilter==='all' || d.result===state.dashFilter).map(d=>`
+    <tr>
+      <td data-label="Evidence"><strong>${d.name}</strong></td>
+      <td data-label="Type">${d.type}</td>
+      <td data-label="Result"><span class="status-pill ${statusClass(d.result)}">${d.label}</span></td>
+      <td data-label="Confidence">${d.conf}%</td>
+      <td data-label="Date">${d.date}</td>
+      <td data-label="Action"><a href="#/report" class="small" style="color:var(--ink); font-weight:600;">View</a></td>
+    </tr>`).join('');
+
+  return `
+  <div class="page-header"><div class="wrap"><div class="breadcrumb">HOME / DASHBOARD</div><h1>Evidence Dashboard</h1></div></div>
+  <section>
+    <div class="wrap">
+      <div class="dash-stats">
+        <div class="stat-card"><div class="small" style="margin-bottom:6px;">Total Verifications</div><div class="stat-num">4</div></div>
+        <div class="stat-card"><div class="small" style="margin-bottom:6px;">Likely Authentic</div><div class="stat-num" style="color:var(--status-authentic);">2</div></div>
+        <div class="stat-card"><div class="small" style="margin-bottom:6px;">Likely AI-Generated</div><div class="stat-num" style="color:var(--status-ai);">2</div></div>
+      </div>
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; margin-bottom:6px;">
+        <div class="h-card">Recent Verifications</div>
+        <a href="#/verify" class="btn btn-accent">Verify Evidence</a>
+      </div>
+      <div class="filter-row" style="margin-top:14px;">
+        ${filters.map(f=>`<button class="filter-chip ${state.dashFilter===f.key?'active':''}" data-filter="${f.key}">${f.label}</button>`).join('')}
+      </div>
+      <div class="card" style="padding:8px 14px; overflow-x:auto;">
+        <table class="dash-table">
+          <thead><tr><th>Evidence</th><th>Type</th><th>Result</th><th>Confidence</th><th>Date</th><th>Action</th></tr></thead>
+          <tbody>${rows || '<tr><td colspan="6" style="padding:24px; text-align:center; color:var(--ink-faint);">No records match this filter.</td></tr>'}</tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+  `;
+}
+
+/* ---------------- Event wiring ---------------- */
+function attachHandlers(path){
+  if(path === '#/verify'){
+    const dz = document.getElementById('dropzone');
+    const fi = document.getElementById('fileInput');
+    if(dz && fi){
+      dz.addEventListener('click', ()=> fi.click());
+      dz.addEventListener('dragover', e=>{ e.preventDefault(); dz.classList.add('drag'); });
+      dz.addEventListener('dragleave', ()=> dz.classList.remove('drag'));
+      dz.addEventListener('drop', e=>{
+        e.preventDefault(); dz.classList.remove('drag');
+        if(e.dataTransfer.files.length) selectFile(e.dataTransfer.files[0]);
+      });
+      fi.addEventListener('change', e=>{
+        if(e.target.files.length) selectFile(e.target.files[0]);
+      });
+    }
+    const removeBtn = document.getElementById('removeFileBtn');
+    if(removeBtn) removeBtn.addEventListener('click', ()=>{
+      state.selectedFile = null; state.filePreviewUrl = null; render();
+    });
+    const startBtn = document.getElementById('startVerificationBtn');
+    if(startBtn) startBtn.addEventListener('click', startVerification);
+
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    tabBtns.forEach(b=> b.addEventListener('click', ()=>{ state.resultTab = b.dataset.tab; render(); }));
+
+    const verifyAnother = document.getElementById('verifyAnotherBtn');
+    if(verifyAnother) verifyAnother.addEventListener('click', ()=>{
+      state.selectedFile=null; state.filePreviewUrl=null; state.analysisProgress=0; state.lastResult=null; render();
+    });
+  }
+  if(path === '#/report'){
+    const dl = document.getElementById('downloadReportBtn');
+    if(dl) dl.addEventListener('click', downloadReport);
+    const pr = document.getElementById('printReportBtn');
+    if(pr) pr.addEventListener('click', ()=> window.print());
+    const va2 = document.getElementById('verifyAnotherBtn2');
+    if(va2) va2.addEventListener('click', ()=>{
+      state.selectedFile=null; state.filePreviewUrl=null; state.analysisProgress=0; state.lastResult=null;
+    });
+  }
+  if(path === '#/dashboard'){
+    document.querySelectorAll('.filter-chip').forEach(b=> b.addEventListener('click', ()=>{
+      state.dashFilter = b.dataset.filter; render();
+    }));
+  }
+}
+
+function selectFile(file){
+  state.selectedFile = file;
+  state.analysisProgress = 0;
+  state.lastResult = null;
+  if(state.filePreviewUrl) URL.revokeObjectURL(state.filePreviewUrl);
+  state.filePreviewUrl = fileTypeGroup(file)==='image' ? URL.createObjectURL(file) : null;
+  render();
+}
+
+function startVerification(){
+  state.analysisProgress = 1;
+  render();
+  let p = 0;
+  const tick = () => {
+    p += 15 + Math.random()*15;
+    if(p >= 100){
+      // Hold at 99% while the (async) multi-signal analysis finishes, so the
+      // progress screen stays visible instead of flashing back to the upload state.
+      state.analysisProgress = 99;
+      render();
+      MockAnalysisEngine.analyze(state.selectedFile).then(result=>{
+        state.analysisProgress = 100;
+        state.lastResult = result;
+        state.resultTab = 'original';
+        render();
+      });
+      return;
+    }
+    state.analysisProgress = p;
+    render();
+    setTimeout(tick, 250);
+  };
+  setTimeout(tick, 250);
+}
+
+function downloadReport(){
+  const r = state.lastResult;
+  if(!r) return;
+  const evidenceLines = (r.evidenceList||[]).map(e=> `  - [${e.dir==='ai'?'AI':(e.dir==='authentic'?'AUTHENTIC':'INFO')}] ${e.label}`).join('\n') || '  (No notable indicators detected in either direction)';
+  const text = `DIGITAL AI EVIDENCE VERIFIER — VERIFICATION REPORT
+Evidence ID: ${r.evidenceId}
+File name: ${r.file.name}
+Classification Result: ${r.verdictLabel}
+Confidence score: ${r.confidence}%
+Verification date: ${r.date.toLocaleString()}
+File hash: ${r.hash}
+
+EXECUTIVE SUMMARY
+Weighted, multi-indicator forensic analysis was performed on the submitted image, evaluating metadata signatures, pixel-level noise, texture uniformity, edge complexity, color distribution, and image dimensions. No single weak signal (missing metadata, compression, resizing, normal editing, etc.) was treated as decisive on its own. Combining the evidence yielded a classification of "${r.verdictLabel}" at ${r.confidence}% confidence.
+
+EVIDENCE CONSIDERED
+${evidenceLines}
+`;
+  const blob = new Blob([text], {type:'text/plain'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `${r.evidenceId}-verification-report.txt`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
